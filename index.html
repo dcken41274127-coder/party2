@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>榮工春酒桌次查詢系統 (雲端同步版)</title>
+    <style>
+        /* 保持原本的 CSS 樣式不變 */
+        :root { --primary-color: #d32f2f; --bg-color: #fcf4f4; }
+        body { font-family: "Microsoft JhengHei", sans-serif; background-color: var(--bg-color); display: flex; justify-content: center; padding: 20px; margin: 0; }
+        .container { background: white; padding: 25px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); width: 100%; max-width: 450px; text-align: center; }
+        h2 { color: var(--primary-color); margin-top: 0; letter-spacing: 2px; }
+        .search-box { display: flex; gap: 10px; margin-bottom: 20px; }
+        input[type="text"] { flex: 1; padding: 12px; border: 2px solid #eee; border-radius: 10px; font-size: 16px; }
+        button { padding: 12px 20px; background-color: var(--primary-color); color: white; border: none; border-radius: 10px; font-size: 16px; cursor: pointer; font-weight: bold; }
+        #result { margin-top: 15px; }
+        .guest-card { background: #fff; border: 1px solid #eee; border-left: 6px solid var(--primary-color); padding: 20px; border-radius: 12px; text-align: left; margin-bottom: 15px; }
+        .table-num { font-size: 2.8em; color: var(--primary-color); font-weight: 900; float: right; }
+        .info-row { margin-bottom: 8px; }
+        .label { color: #888; font-size: 0.85em; display: block; }
+        .value { font-size: 1.1em; font-weight: bold; color: #333; }
+        .status-msg { color: #666; font-size: 0.8em; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>🧧 榮工春酒桌次查詢</h2>
+    <div id="loadingStatus" class="status-msg">正在同步雲端名單...</div>
+    
+    <div class="search-box">
+        <input type="text" id="nameInput" placeholder="輸入姓名或廠商" onkeypress="if(event.key==='Enter') searchTable()">
+        <button onclick="searchTable()">查詢</button>
+    </div>
+    
+    <div id="result"></div>
+</div>
+
+<script>
+    // 🔗 請在這裡貼上你從 Google Sheets 發佈的 CSV 網址
+    const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQkD6buIF5IF1OevFbSbRABxFg464c2tlTt3tC5BM5JYPCPbOrZhB1_7LYt-_kiMnlSmWLdo4p6CBBW/pub?output=csv';
+
+    let guestData = [];
+
+    // 自動抓取資料的函式
+    async function fetchSheetData() {
+        try {
+            const response = await fetch(SHEET_CSV_URL);
+            const csvText = await response.text();
+            
+            // 將 CSV 轉換為 JSON 物件 (假設欄位順序: B桌次, D廠商, E姓名, F職稱, G人數)
+            // 注意：CSV 的索引從 0 開始，所以 B=1, D=3, E=4, F=5, G=6
+            const rows = csvText.split('\n').slice(1); // 略過標題列
+            guestData = rows.map(row => {
+                const cols = row.split(',');
+                return {
+                    table: cols[1] ? cols[1].trim() : "",
+                    company: cols[3] ? cols[3].trim() : "",
+                    name: cols[4] ? cols[4].trim() : "",
+                    title: cols[5] ? cols[5].trim() : "",
+                    count: cols[6] ? cols[6].trim() : "0"
+                };
+            }).filter(g => g.name || g.company); // 過濾掉空行
+
+            document.getElementById('loadingStatus').innerText = "✅ 雲端名單同步完成";
+        } catch (error) {
+            document.getElementById('loadingStatus').innerText = "❌ 同步失敗，請檢查網路或網址";
+            console.error(error);
+        }
+    }
+
+    function searchTable() {
+        const keyword = document.getElementById('nameInput').value.trim();
+        const resultDiv = document.getElementById('result');
+        resultDiv.innerHTML = ""; 
+
+        if (!keyword) return;
+
+        const matches = guestData.filter(g => 
+            (g.name && g.name.includes(keyword)) || 
+            (g.company && g.company.includes(keyword))
+        );
+
+        if (matches.length > 0) {
+            matches.forEach(person => {
+                resultDiv.innerHTML += `
+                    <div class="guest-card">
+                        <span class="table-num">${person.table}</span>
+                        <div class="info-row"><span class="label">姓名 / 職稱</span><span class="value">${person.name || "團體"} (${person.title || "無"})</span></div>
+                        <div class="info-row"><span class="label">所屬單位</span><span class="value">${person.company}</span></div>
+                        <div class="info-row"><span class="label">人數</span><span class="value">${person.count} 位</span></div>
+                    </div>
+                `;
+            });
+        } else {
+            resultDiv.innerHTML = "<div style='color:red;'>查無資料，請確認輸入是否有誤。</div>";
+        }
+    }
+
+    // 頁面載入時執行同步
+    fetchSheetData();
+</script>
+
+</body>
+</html>
