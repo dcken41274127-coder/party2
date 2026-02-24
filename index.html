@@ -9,17 +9,21 @@
         body { font-family: "Microsoft JhengHei", sans-serif; background-color: var(--bg-color); display: flex; justify-content: center; padding: 20px; margin: 0; }
         .container { background: white; padding: 25px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); width: 100%; max-width: 450px; text-align: center; position: relative; min-height: 400px; }
         
-        .nav-btn { position: absolute; top: 15px; font-size: 0.75em; padding: 5px 10px; border-radius: 5px; cursor: pointer; border: 1px solid #ddd; transition: all 0.3s; }
+        /* 按鈕樣式 */
+        .nav-btn { position: absolute; top: 15px; font-size: 0.75em; padding: 5px 10px; border-radius: 5px; cursor: pointer; border: 1px solid #ddd; transition: all 0.3s; z-index: 10; }
         .staff-login-btn { right: 15px; background: #eee; color: #666; }
         .staff-login-btn.active { background: #d32f2f; color: white; border-color: #b71c1c; }
         .edit-sheet-btn { left: 15px; background: #2e7d32; color: white; border-color: #1b5e20; display: none; } 
 
-        h2 { color: var(--primary-color); margin-top: 25px; letter-spacing: 2px; }
+        /* 標題與 LOGO 樣式 */
+        .header-section { margin-top: 30px; margin-bottom: 20px; }
+        .main-title { font-size: 1.6em; color: #333; font-weight: bold; margin: 0 0 15px 0; letter-spacing: 1px; }
+        .logo-img { width: 130px; height: auto; display: block; margin: 0 auto; }
+
         .search-box { display: flex; gap: 10px; margin-bottom: 20px; }
         input[type="text"] { flex: 1; padding: 12px; border: 2px solid #eee; border-radius: 10px; font-size: 16px; outline: none; }
         button { padding: 12px 20px; background-color: var(--primary-color); color: white; border: none; border-radius: 10px; font-size: 16px; cursor: pointer; font-weight: bold; }
         
-        /* 模式提示：預設隱藏 */
         .mode-tip { font-size: 0.85em; margin-bottom: 10px; padding: 8px; border-radius: 5px; font-weight: bold; display: none; }
         .staff-mode-tip { background: #fff3e0; color: #e65100; display: block; }
 
@@ -38,10 +42,12 @@
     <div id="editBtn" onclick="openSheet()" class="nav-btn edit-sheet-btn">管理名單</div>
     <div id="adminBtn" class="nav-btn staff-login-btn" onclick="toggleStaffMode()">工作人員</div>
 
-    <h2>🧧 榮工春酒查詢</h2>
+    <div class="header-section">
+        <h1 class="main-title">榮工春酒桌次查詢系統</h1>
+        <img src="party2/250310_LOGO_OL-removebg-preview.png" alt="GR Logo" class="logo-img">
+    </div>
     
     <div id="modeTip" class="mode-tip">目前模式：工作人員</div>
-    
     <div id="loadingStatus" class="status-msg">正在同步最新名單...</div>
     
     <div class="search-box">
@@ -78,7 +84,7 @@
                 document.getElementById('adminBtn').innerText = "退出工作人員模式";
                 document.getElementById('adminBtn').classList.add('active');
                 document.getElementById('editBtn').style.display = "block"; 
-                document.getElementById('modeTip').className = "mode-tip staff-mode-tip"; // 顯示橘色提示
+                document.getElementById('modeTip').className = "mode-tip staff-mode-tip";
                 document.getElementById('nameInput').placeholder = "輸入姓名、廠商或桌號";
             } else if (pwd !== null) {
                 alert("密碼錯誤！");
@@ -88,7 +94,7 @@
             document.getElementById('adminBtn').innerText = "工作人員";
             document.getElementById('adminBtn').classList.remove('active');
             document.getElementById('editBtn').style.display = "none"; 
-            document.getElementById('modeTip').className = "mode-tip"; // 隱藏提示
+            document.getElementById('modeTip').className = "mode-tip"; 
             document.getElementById('nameInput').placeholder = "請輸入姓名或廠商";
             document.getElementById('result').innerHTML = "";
             document.getElementById('nameInput').value = "";
