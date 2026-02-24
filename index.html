@@ -43,7 +43,7 @@
     let guestData = [];
 
    // 自動抓取資料並處理亂碼的函式
-   async function fetchSheetData() {
+async function fetchSheetData() {
         try {
             const response = await fetch(SHEET_CSV_URL, { cache: "no-store" });
             if (!response.ok) throw new Error('連線失敗');
@@ -52,22 +52,22 @@
             const decoder = new TextDecoder('utf-8');
             const csvText = decoder.decode(buffer);
             
-            // 使用正則表達式處理換行，確保相容性
+            // 處理換行符號
             const rows = csvText.split(/\r?\n/).filter(row => row.trim() !== "");
-            const dataRows = rows.slice(1); // 跳過標題列 (桌次,廠商名稱,姓名,職稱,參加人數)
+            const dataRows = rows.slice(1); // 跳過標題列
 
             guestData = dataRows.map(row => {
-                // 正確處理 CSV 欄位，避免逗號干擾
+                // 使用正則拆分欄位，避免逗號干擾
                 const cols = row.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || [];
                 const cleanCols = cols.map(c => c.replace(/^"|"$/g, '').trim());
 
                 return {
-                    // 根據你提供的資料順序重新對應索引：
-                    table:   cleanCols[0] || "", // 第一欄：桌次
-                    company: cleanCols[1] || "", // 第二欄：廠商名稱
-                    name:    cleanCols[2] || "", // 第三欄：姓名
-                    title:   cleanCols[3] || "", // 第四欄：職稱
-                    count:   cleanCols[4] || "0"  // 第五欄：參加人數
+                    // 根據你最新的 CSV 格式對齊索引：
+                    table:   cleanCols[0] || "", // 第一欄 (索引0)：桌次
+                    company: cleanCols[1] || "", // 第二欄 (索引1)：廠商名稱
+                    name:    cleanCols[2] || "", // 第三欄 (索引2)：姓名
+                    title:   cleanCols[3] || "", // 第四欄 (索引3)：職稱
+                    count:   cleanCols[4] || "0"  // 第五欄 (索引4)：參加人數
                 };
             }).filter(g => g.name || g.company);
 
