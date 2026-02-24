@@ -82,19 +82,29 @@
         }
     }
 
-    function searchTable() {
+function searchTable() {
         const keyword = document.getElementById('nameInput').value.trim();
         const resultDiv = document.getElementById('result');
         resultDiv.innerHTML = ""; 
 
         if (!keyword) return;
 
-        const matches = guestData.filter(g => 
-            (g.name && g.name.includes(keyword)) || 
-            (g.company && g.company.includes(keyword))
-        );
+        let matches = [];
+
+        // --- 💡 智慧判斷搜尋模式 ---
+        if (/^\d+$/.test(keyword)) {
+            // 模式 A：輸入純數字，精確比對「桌次」欄位
+            matches = guestData.filter(g => g.table === keyword);
+        } else {
+            // 模式 B：輸入文字，模糊搜尋「姓名」或「廠商」
+            matches = guestData.filter(g => 
+                (g.name && g.name.includes(keyword)) || 
+                (g.company && g.company.includes(keyword))
+            );
+        }
 
         if (matches.length > 0) {
+            // 直接渲染名單卡片，不顯示統計區塊
             matches.forEach(person => {
                 resultDiv.innerHTML += `
                     <div class="guest-card">
@@ -115,7 +125,7 @@
                 `;
             });
         } else {
-            resultDiv.innerHTML = "<div style='color:red; margin-top:20px;'>查無資料，請確認輸入是否正確。</div>";
+            resultDiv.innerHTML = "<div style='color:red; margin-top:20px;'>查無資料，請嘗試輸入不同關鍵字。</div>";
         }
     }
 
