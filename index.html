@@ -3,90 +3,71 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>榮工春酒桌次查詢系統 (雲端同步安全版)</title>
+    <title>榮工春酒桌次查詢系統</title>
     <style>
         :root { --primary-color: #d32f2f; --bg-color: #fcf4f4; }
         body { font-family: "Microsoft JhengHei", sans-serif; background-color: var(--bg-color); display: flex; justify-content: center; padding: 20px; margin: 0; }
         .container { background: white; padding: 25px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); width: 100%; max-width: 450px; text-align: center; position: relative; }
-        h2 { color: var(--primary-color); margin-top: 15px; letter-spacing: 2px; }
+        h2 { color: var(--primary-color); margin-top: 25px; letter-spacing: 2px; }
         
-        /* 右上角管理按鈕 */
-        .admin-btn { position: absolute; top: 15px; right: 15px; background: #f0f0f0; color: #888; text-decoration: none; font-size: 11px; padding: 4px 8px; border-radius: 15px; border: 1px solid #ddd; transition: 0.3s; }
-        .admin-btn:hover { background: #e0e0e0; color: #333; }
+        /* 頂部按鈕通用樣式 */
+        .top-btn { position: absolute; top: 15px; background: #f0f0f0; color: #888; text-decoration: none; font-size: 11px; padding: 4px 8px; border-radius: 15px; border: 1px solid #ddd; transition: 0.3s; cursor: pointer; }
+        .top-btn:hover { background: #e0e0e0; color: #333; }
+        
+        /* 定位 */
+        .btn-left { left: 15px; display: none; } /* 💡 初始設定為隱藏 */
+        .btn-right { right: 15px; }
 
         .search-box { display: flex; gap: 10px; margin-bottom: 20px; }
         input[type="text"] { flex: 1; padding: 12px; border: 2px solid #eee; border-radius: 10px; font-size: 16px; -webkit-appearance: none; }
         button { padding: 12px 20px; background-color: var(--primary-color); color: white; border: none; border-radius: 10px; font-size: 16px; cursor: pointer; font-weight: bold; }
         
         #result { margin-top: 15px; }
-        
-        /* 💡 優化後的卡片佈局：解決多桌號重疊問題 */
-        .guest-card { 
-            background: #fff; 
-            border: 1px solid #eee; 
-            border-left: 6px solid var(--primary-color); 
-            padding: 20px; 
-            border-radius: 12px; 
-            text-align: left; 
-            margin-bottom: 15px; 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: flex-start;
-            animation: fadeIn 0.3s ease-in; 
-        }
+        .guest-card { background: #fff; border: 1px solid #eee; border-left: 6px solid var(--primary-color); padding: 20px; border-radius: 12px; text-align: left; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: flex-start; animation: fadeIn 0.3s ease-in; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         
-        /* 左側資訊區 */
         .info-container { flex: 1; }
-
-        /* 右側桌號區：長文字自動斷行並縮小 */
-        .table-num { 
-            font-size: 2.2em; 
-            color: var(--primary-color); 
-            font-weight: 900; 
-            margin-left: 10px; 
-            text-align: right; 
-            line-height: 1.1; 
-            word-break: break-all; 
-            max-width: 45%; 
-        }
-        /* 多桌號時自動縮小字級 */
+        .table-num { font-size: 2.2em; color: var(--primary-color); font-weight: 900; margin-left: 10px; text-align: right; line-height: 1.1; word-break: break-all; max-width: 45%; }
         .table-num.long { font-size: 1.3em; color: #d32f2f; }
 
         .info-row { margin-bottom: 8px; }
         .label { color: #888; font-size: 0.85em; display: block; }
         .value { font-size: 1.1em; font-weight: bold; color: #333; }
         .status-msg { color: #666; font-size: 0.8em; margin-bottom: 10px; }
+        .staff-mode-badge { display: none; background: #fff3e0; color: #e65100; font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-bottom: 10px; border: 1px solid #ffe0b2; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <a href="javascript:void(0)" onclick="checkAdminPassword()" class="admin-btn">⚙️ 管理名單</a>
+    <div id="adminBtn" onclick="adminLink()" class="top-btn btn-left">⚙️ 管理名單</div>
+    <div id="staffBtn" onclick="staffUnlock()" class="top-btn btn-right">🧑‍💼 工作人員</div>
+
     <h2>🧧 榮工春酒桌次查詢</h2>
+    <div id="staffBadge" class="staff-mode-badge">已解鎖：工作人員模式 (支援桌號查詢)</div>
     <div id="loadingStatus" class="status-msg">正在同步雲端名單...</div>
+    
     <div class="search-box">
-        <input type="text" id="nameInput" placeholder="輸入姓名、廠商或桌號" onkeypress="if(event.key==='Enter') searchTable()">
+        <input type="text" id="nameInput" placeholder="請輸入姓名或廠商" onkeypress="if(event.key==='Enter') searchTable()">
         <button onclick="searchTable()">查詢</button>
     </div>
+    
     <div id="result"></div>
 </div>
 
 <script>
     const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQkD6buIF5IF1OevFbSbRABxFg464c2tlTt3tC5BM5JYPCPbOrZhB1_7LYt-_kiMnlSmWLdo4p6CBBW/pub?output=csv';
-    const EDIT_SHEET_URL = 'https://docs.google.com/spreadsheets/d/1B0qXp-I9i8p_UuU08-6T8m73L_yqjHh979vV62m9yF0/edit';
+    const GOOGLE_SHEET_EDIT_URL = 'https://docs.google.com/spreadsheets/d/14_bUyEP5xN56NrSADemrRSNK8O8kNLA04CmcUXx39q4/edit?usp=sharing';
 
     let guestData = [];
+    let isStaffMode = false;
 
     async function fetchSheetData() {
         try {
             const response = await fetch(SHEET_CSV_URL, { cache: "no-store" });
-            if (!response.ok) throw new Error('網路連線異常');
-
             const buffer = await response.arrayBuffer();
             const decoder = new TextDecoder('utf-8');
             const csvText = decoder.decode(buffer);
-            
             const rows = csvText.split(/\r?\n/).filter(row => row.trim() !== "");
             if (rows.length < 2) return;
 
@@ -99,8 +80,7 @@
                 count: headers.indexOf("參加人數")
             };
 
-            const dataRows = rows.slice(1);
-            guestData = dataRows.map(row => {
+            guestData = rows.slice(1).map(row => {
                 const cols = row.split(',').map(c => c.replace(/^"|"$/g, '').trim());
                 return {
                     table:   idx.table !== -1 ? cols[idx.table] : "",
@@ -111,9 +91,9 @@
                 };
             }).filter(g => g.name || g.company);
 
-            document.getElementById('loadingStatus').innerText = "✅ 雲端名單已同步完成";
-        } catch (error) {
-            document.getElementById('loadingStatus').innerText = "❌ 同步失敗：" + error.message;
+            document.getElementById('loadingStatus').innerText = "✅ 名單已同步";
+        } catch (e) {
+            document.getElementById('loadingStatus').innerText = "❌ 同步失敗";
         }
     }
 
@@ -121,12 +101,16 @@
         const keyword = document.getElementById('nameInput').value.trim();
         const resultDiv = document.getElementById('result');
         resultDiv.innerHTML = ""; 
-
         if (!keyword) return;
 
         let matches = [];
         if (/^\d+$/.test(keyword)) {
-            matches = guestData.filter(g => g.table === keyword);
+            if (isStaffMode) {
+                matches = guestData.filter(g => g.table === keyword);
+            } else {
+                resultDiv.innerHTML = "<div style='color:orange; margin-top:20px;'>一般查詢不支援桌號搜尋，請輸入姓名或廠商。</div>";
+                return;
+            }
         } else {
             matches = guestData.filter(g => 
                 (g.name && g.name.includes(keyword)) || 
@@ -136,41 +120,45 @@
 
         if (matches.length > 0) {
             matches.forEach(person => {
-                // 💡 判斷桌號長度來決定字體大小
-                const isLongTable = person.table.length > 3;
-                const tableClass = isLongTable ? "table-num long" : "table-num";
-
+                const tableClass = person.table.length > 3 ? "table-num long" : "table-num";
                 resultDiv.innerHTML += `
                     <div class="guest-card">
                         <div class="info-container">
-                            <div class="info-row">
-                                <span class="label">姓名 / 職稱</span>
-                                <span class="value">${person.name || "團體"} <small style="font-weight:normal; color:#666;">(${person.title || "無"})</small></span>
-                            </div>
-                            <div class="info-row">
-                                <span class="label">所屬單位</span>
-                                <span class="value">${person.company || "個人/其它"}</span>
-                            </div>
-                            <div class="info-row">
-                                <span class="label">出席人數</span>
-                                <span class="value">${person.count} 位</span>
-                            </div>
+                            <div class="info-row"><span class="label">姓名 / 職稱</span><span class="value">${person.name || "團體"} (${person.title || "無"})</span></div>
+                            <div class="info-row"><span class="label">所屬單位</span><span class="value">${person.company || "個人"}</span></div>
+                            <div class="info-row"><span class="label">人數</span><span class="value">${person.count} 位</span></div>
                         </div>
                         <div class="${tableClass}">${person.table}</div>
                     </div>
                 `;
             });
         } else {
-            resultDiv.innerHTML = "<div style='color:red; margin-top:20px;'>查無資料，請確認關鍵字是否正確。</div>";
+            resultDiv.innerHTML = "<div style='color:red; margin-top:20px;'>查無資料。</div>";
         }
     }
 
-    function checkAdminPassword() {
-        const pwd = prompt("請輸入管理員密碼：");
-        if (pwd === "27945229") {
-            window.open(EDIT_SHEET_URL, '_blank');
+    // 左上角：管理名單 (驗證 279452299)
+    function adminLink() {
+        const pwd = prompt("請輸入管理名單密碼：");
+        if (pwd === "279452299") {
+            window.open(GOOGLE_SHEET_EDIT_URL, '_blank');
         } else if (pwd !== null) {
-            alert("密碼錯誤！");
+            alert("密碼錯誤");
+        }
+    }
+
+    // 右上角：解鎖工作人員模式 (驗證 27945229)
+    function staffUnlock() {
+        const pwd = prompt("請輸入工作人員密碼：");
+        if (pwd === "27945229") {
+            isStaffMode = true;
+            // 💡 解鎖功能：顯示左上角按鈕、顯示標籤、更換輸入提示
+            document.getElementById('adminBtn').style.display = 'block';
+            document.getElementById('staffBadge').style.display = 'inline-block';
+            document.getElementById('nameInput').placeholder = "已解鎖：支援姓名、廠商、桌號查詢";
+            alert("工作人員模式已解鎖，「管理名單」按鈕已出現在左上角。");
+        } else if (pwd !== null) {
+            alert("密碼錯誤");
         }
     }
 
