@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>榮工春酒桌次查詢系統 (雲端同步版2)</title>
+    <title>榮工春酒桌次查詢系統 (雲端同步版)</title>
     <style>
         :root { --primary-color: #d32f2f; --bg-color: #fcf4f4; }
         body { font-family: "Microsoft JhengHei", sans-serif; background-color: var(--bg-color); display: flex; justify-content: center; padding: 20px; margin: 0; }
@@ -15,7 +15,7 @@
         #result { margin-top: 15px; }
         .guest-card { background: #fff; border: 1px solid #eee; border-left: 6px solid var(--primary-color); padding: 20px; border-radius: 12px; text-align: left; margin-bottom: 15px; position: relative; }
         .table-num { font-size: 2.5em; color: var(--primary-color); font-weight: 900; position: absolute; right: 20px; top: 15px; }
-        .info-row { margin-bottom: 8px; width: 75%; }
+        .info-row { margin-bottom: 8px; width: 70%; }
         .label { color: #888; font-size: 0.85em; display: block; }
         .value { font-size: 1.1em; font-weight: bold; color: #333; }
         .status-msg { color: #666; font-size: 0.8em; margin-bottom: 10px; }
@@ -36,7 +36,6 @@
 </div>
 
 <script>
-    // 🔗 Google Sheets 發佈的 CSV 網址
     const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQkD6buIF5IF1OevFbSbRABxFg464c2tlTt3tC5BM5JYPCPbOrZhB1_7LYt-_kiMnlSmWLdo4p6CBBW/pub?output=csv';
 
     let guestData = [];
@@ -50,25 +49,34 @@
             const decoder = new TextDecoder('utf-8');
             const csvText = decoder.decode(buffer);
             
-            // 處理換行
             const rows = csvText.split(/\r?\n/).filter(row => row.trim() !== "");
-            const dataRows = rows.slice(1); // 跳過第一列標題
+            if (rows.length < 2) return;
 
+            // --- 💡 自動辨識欄位位置 ---
+            const headers = rows[0].split(',').map(h => h.trim());
+            const idx = {
+                table: headers.indexOf("桌次"),
+                company: headers.indexOf("廠商名稱"),
+                name: headers.indexOf("姓名"),
+                title: headers.indexOf("職稱"),
+                count: headers.indexOf("參加人數")
+            };
+
+            const dataRows = rows.slice(1);
             guestData = dataRows.map(row => {
-                // 改用簡單切割，避免正則表達式在處理某些空格時出錯
-                const cleanCols = row.split(',').map(c => c.replace(/^"|"$/g, '').trim());
+                // 使用更精確的切割方式，保留空欄位
+                const cols = row.split(',').map(c => c.replace(/^"|"$/g, '').trim());
 
                 return {
-                    table:   cleanCols[0] || "", // 索引 0: 桌次
-                    company: cleanCols[1] || "", // 索引 1: 廠商名稱
-                    name:    cleanCols[2] || "", // 索引 2: 姓名
-                    title:   cleanCols[3] || "", // 索引 3: 職稱
-                    count:   cleanCols[4] || "0"  // 索引 4: 參加人數
+                    table:   idx.table !== -1 ? cols[idx.table] : "",
+                    company: idx.company !== -1 ? cols[idx.company] : "",
+                    name:    idx.name !== -1 ? cols[idx.name] : "",
+                    title:   idx.title !== -1 ? cols[idx.title] : "",
+                    count:   idx.count !== -1 ? cols[idx.count] : "0"
                 };
             }).filter(g => g.name || g.company);
 
             document.getElementById('loadingStatus').innerText = "✅ 名單同步完成";
-            console.log("同步成功筆數:", guestData.length);
         } catch (error) {
             document.getElementById('loadingStatus').innerText = "❌ 同步失敗：" + error.message;
         }
@@ -81,7 +89,6 @@
 
         if (!keyword) return;
 
-        // 進行過濾
         const matches = guestData.filter(g => 
             (g.name && g.name.includes(keyword)) || 
             (g.company && g.company.includes(keyword))
@@ -94,4 +101,26 @@
                         <span class="table-num">${person.table}</span>
                         <div class="info-row">
                             <span class="label">姓名 / 職稱</span>
-                            <span class="value">${person.name || "團體"} <small style
+                            <span class="value">${person.name || "團體"} <small style="font-weight:normal; color:#666;">(${person.title || "無"})</small></span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">所屬單位</span>
+                            <span class="value">${person.company || "個人"}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">出席人數</span>
+                            <span class="value">${person.count} 位</span>
+                        </div>
+                    </div>
+                `;
+            });
+        } else {
+            resultDiv.innerHTML = "<div style='color:red; margin-top:20px;'>查無資料，請確認輸入是否正確。</div>";
+        }
+    }
+
+    fetchSheetData();
+</script>
+
+</body>
+</html>
