@@ -3,17 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>榮工春酒桌次查詢系統 (雲端同步版)</title>
+    <title>榮工春酒桌次查詢系統 (雲端同步安全版)</title>
     <style>
         :root { --primary-color: #d32f2f; --bg-color: #fcf4f4; }
         body { font-family: "Microsoft JhengHei", sans-serif; background-color: var(--bg-color); display: flex; justify-content: center; padding: 20px; margin: 0; }
-        .container { background: white; padding: 25px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); width: 100%; max-width: 450px; text-align: center; }
-        h2 { color: var(--primary-color); margin-top: 0; letter-spacing: 2px; }
+        .container { background: white; padding: 25px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); width: 100%; max-width: 450px; text-align: center; position: relative; }
+        h2 { color: var(--primary-color); margin-top: 15px; letter-spacing: 2px; }
+        
+        /* 右上角管理按鈕 */
+        .admin-btn { position: absolute; top: 15px; right: 15px; background: #f0f0f0; color: #888; text-decoration: none; font-size: 11px; padding: 4px 8px; border-radius: 15px; border: 1px solid #ddd; transition: 0.3s; }
+        .admin-btn:hover { background: #e0e0e0; color: #333; }
+
         .search-box { display: flex; gap: 10px; margin-bottom: 20px; }
         input[type="text"] { flex: 1; padding: 12px; border: 2px solid #eee; border-radius: 10px; font-size: 16px; -webkit-appearance: none; }
         button { padding: 12px 20px; background-color: var(--primary-color); color: white; border: none; border-radius: 10px; font-size: 16px; cursor: pointer; font-weight: bold; }
+        
         #result { margin-top: 15px; }
-        .guest-card { background: #fff; border: 1px solid #eee; border-left: 6px solid var(--primary-color); padding: 20px; border-radius: 12px; text-align: left; margin-bottom: 15px; position: relative; }
+        .guest-card { background: #fff; border: 1px solid #eee; border-left: 6px solid var(--primary-color); padding: 20px; border-radius: 12px; text-align: left; margin-bottom: 15px; position: relative; animation: fadeIn 0.3s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
         .table-num { font-size: 2.5em; color: var(--primary-color); font-weight: 900; position: absolute; right: 20px; top: 15px; }
         .info-row { margin-bottom: 8px; width: 70%; }
         .label { color: #888; font-size: 0.85em; display: block; }
@@ -24,11 +32,13 @@
 <body>
 
 <div class="container">
+    <a href="javascript:void(0)" onclick="checkAdminPassword()" class="admin-btn">⚙️ 管理名單</a>
+
     <h2>🧧 榮工春酒桌次查詢</h2>
-    <div id="loadingStatus" class="status-msg">正在同步最新名單...</div>
+    <div id="loadingStatus" class="status-msg">正在同步雲端名單...</div>
     
     <div class="search-box">
-        <input type="text" id="nameInput" placeholder="請輸入姓名或廠商或桌次顯示該桌次名單" onkeypress="if(event.key==='Enter') searchTable()">
+        <input type="text" id="nameInput" placeholder="輸入姓名、廠商或桌號" onkeypress="if(event.key==='Enter') searchTable()">
         <button onclick="searchTable()">查詢</button>
     </div>
     
@@ -36,14 +46,19 @@
 </div>
 
 <script>
+    // 🔗 1. 請填入發佈為 CSV 的網址
     const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQkD6buIF5IF1OevFbSbRABxFg464c2tlTt3tC5BM5JYPCPbOrZhB1_7LYt-_kiMnlSmWLdo4p6CBBW/pub?output=csv';
+    
+    // 🔗 2. 請填入 Google Sheets 的編輯網址 (密碼後跳轉用)
+    const EDIT_SHEET_URL = 'https://docs.google.com/spreadsheets/d/1B0qXp-I9i8p_UuU08-6T8m73L_yqjHh979vV62m9yF0/edit';
 
     let guestData = [];
 
+    // 同步資料
     async function fetchSheetData() {
         try {
             const response = await fetch(SHEET_CSV_URL, { cache: "no-store" });
-            if (!response.ok) throw new Error('連線失敗');
+            if (!response.ok) throw new Error('網路連線異常');
 
             const buffer = await response.arrayBuffer();
             const decoder = new TextDecoder('utf-8');
@@ -52,7 +67,7 @@
             const rows = csvText.split(/\r?\n/).filter(row => row.trim() !== "");
             if (rows.length < 2) return;
 
-            // --- 💡 自動辨識欄位位置 ---
+            // 自動辨識標題欄位位置
             const headers = rows[0].split(',').map(h => h.trim());
             const idx = {
                 table: headers.indexOf("桌次"),
@@ -64,9 +79,7 @@
 
             const dataRows = rows.slice(1);
             guestData = dataRows.map(row => {
-                // 使用更精確的切割方式，保留空欄位
                 const cols = row.split(',').map(c => c.replace(/^"|"$/g, '').trim());
-
                 return {
                     table:   idx.table !== -1 ? cols[idx.table] : "",
                     company: idx.company !== -1 ? cols[idx.company] : "",
@@ -76,13 +89,14 @@
                 };
             }).filter(g => g.name || g.company);
 
-            document.getElementById('loadingStatus').innerText = "✅ 名單同步完成";
+            document.getElementById('loadingStatus').innerText = "✅ 雲端名單已同步完成";
         } catch (error) {
             document.getElementById('loadingStatus').innerText = "❌ 同步失敗：" + error.message;
         }
     }
 
-function searchTable() {
+    // 搜尋功能
+    function searchTable() {
         const keyword = document.getElementById('nameInput').value.trim();
         const resultDiv = document.getElementById('result');
         resultDiv.innerHTML = ""; 
@@ -91,12 +105,10 @@ function searchTable() {
 
         let matches = [];
 
-        // --- 💡 智慧判斷搜尋模式 ---
+        // 智慧判斷：純數字查桌號，文字查姓名/廠商
         if (/^\d+$/.test(keyword)) {
-            // 模式 A：輸入純數字，精確比對「桌次」欄位
             matches = guestData.filter(g => g.table === keyword);
         } else {
-            // 模式 B：輸入文字，模糊搜尋「姓名」或「廠商」
             matches = guestData.filter(g => 
                 (g.name && g.name.includes(keyword)) || 
                 (g.company && g.company.includes(keyword))
@@ -104,7 +116,6 @@ function searchTable() {
         }
 
         if (matches.length > 0) {
-            // 直接渲染名單卡片，不顯示統計區塊
             matches.forEach(person => {
                 resultDiv.innerHTML += `
                     <div class="guest-card">
@@ -115,7 +126,7 @@ function searchTable() {
                         </div>
                         <div class="info-row">
                             <span class="label">所屬單位</span>
-                            <span class="value">${person.company || "個人"}</span>
+                            <span class="value">${person.company || "個人/其它"}</span>
                         </div>
                         <div class="info-row">
                             <span class="label">出席人數</span>
@@ -125,7 +136,17 @@ function searchTable() {
                 `;
             });
         } else {
-            resultDiv.innerHTML = "<div style='color:red; margin-top:20px;'>查無資料，請嘗試輸入不同關鍵字。</div>";
+            resultDiv.innerHTML = "<div style='color:red; margin-top:20px;'>查無資料，請確認關鍵字是否正確。</div>";
+        }
+    }
+
+    // 密碼檢查
+    function checkAdminPassword() {
+        const pwd = prompt("請輸入管理員密碼：");
+        if (pwd === "27945229") {
+            window.open(EDIT_SHEET_URL, '_blank');
+        } else if (pwd !== null) {
+            alert("密碼錯誤！");
         }
     }
 
@@ -133,5 +154,4 @@ function searchTable() {
 </script>
 
 </body>
-
 </html>
