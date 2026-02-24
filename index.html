@@ -3,20 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>榮工春酒桌次查詢系統 (雲端同步版)</title>
+    <title>榮工春酒桌次查詢系統 (雲端同步版2)</title>
     <style>
-        /* 保持原本的 CSS 樣式不變 */
         :root { --primary-color: #d32f2f; --bg-color: #fcf4f4; }
         body { font-family: "Microsoft JhengHei", sans-serif; background-color: var(--bg-color); display: flex; justify-content: center; padding: 20px; margin: 0; }
         .container { background: white; padding: 25px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); width: 100%; max-width: 450px; text-align: center; }
         h2 { color: var(--primary-color); margin-top: 0; letter-spacing: 2px; }
         .search-box { display: flex; gap: 10px; margin-bottom: 20px; }
-        input[type="text"] { flex: 1; padding: 12px; border: 2px solid #eee; border-radius: 10px; font-size: 16px; }
+        input[type="text"] { flex: 1; padding: 12px; border: 2px solid #eee; border-radius: 10px; font-size: 16px; -webkit-appearance: none; }
         button { padding: 12px 20px; background-color: var(--primary-color); color: white; border: none; border-radius: 10px; font-size: 16px; cursor: pointer; font-weight: bold; }
         #result { margin-top: 15px; }
-        .guest-card { background: #fff; border: 1px solid #eee; border-left: 6px solid var(--primary-color); padding: 20px; border-radius: 12px; text-align: left; margin-bottom: 15px; }
-        .table-num { font-size: 2.8em; color: var(--primary-color); font-weight: 900; float: right; }
-        .info-row { margin-bottom: 8px; }
+        .guest-card { background: #fff; border: 1px solid #eee; border-left: 6px solid var(--primary-color); padding: 20px; border-radius: 12px; text-align: left; margin-bottom: 15px; position: relative; }
+        .table-num { font-size: 2.5em; color: var(--primary-color); font-weight: 900; position: absolute; right: 20px; top: 15px; }
+        .info-row { margin-bottom: 8px; width: 75%; }
         .label { color: #888; font-size: 0.85em; display: block; }
         .value { font-size: 1.1em; font-weight: bold; color: #333; }
         .status-msg { color: #666; font-size: 0.8em; margin-bottom: 10px; }
@@ -26,10 +25,10 @@
 
 <div class="container">
     <h2>🧧 榮工春酒桌次查詢</h2>
-    <div id="loadingStatus" class="status-msg">正在同步雲端名單...</div>
+    <div id="loadingStatus" class="status-msg">正在同步最新名單...</div>
     
     <div class="search-box">
-        <input type="text" id="nameInput" placeholder="輸入姓名或廠商" onkeypress="if(event.key==='Enter') searchTable()">
+        <input type="text" id="nameInput" placeholder="請輸入姓名或廠商" onkeypress="if(event.key==='Enter') searchTable()">
         <button onclick="searchTable()">查詢</button>
     </div>
     
@@ -37,13 +36,12 @@
 </div>
 
 <script>
-    // 🔗 請在這裡貼上你從 Google Sheets 發佈的 CSV 網址
+    // 🔗 Google Sheets 發佈的 CSV 網址
     const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQkD6buIF5IF1OevFbSbRABxFg464c2tlTt3tC5BM5JYPCPbOrZhB1_7LYt-_kiMnlSmWLdo4p6CBBW/pub?output=csv';
 
     let guestData = [];
 
-   // 自動抓取資料並處理亂碼的函式
-async function fetchSheetData() {
+    async function fetchSheetData() {
         try {
             const response = await fetch(SHEET_CSV_URL, { cache: "no-store" });
             if (!response.ok) throw new Error('連線失敗');
@@ -52,30 +50,27 @@ async function fetchSheetData() {
             const decoder = new TextDecoder('utf-8');
             const csvText = decoder.decode(buffer);
             
-            // 處理換行符號
+            // 處理換行
             const rows = csvText.split(/\r?\n/).filter(row => row.trim() !== "");
-            const dataRows = rows.slice(1); // 跳過標題列
+            const dataRows = rows.slice(1); // 跳過第一列標題
 
             guestData = dataRows.map(row => {
-                // 使用正則拆分欄位，避免逗號干擾
-                const cols = row.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || [];
-                const cleanCols = cols.map(c => c.replace(/^"|"$/g, '').trim());
+                // 改用簡單切割，避免正則表達式在處理某些空格時出錯
+                const cleanCols = row.split(',').map(c => c.replace(/^"|"$/g, '').trim());
 
                 return {
-                    // 根據你最新的 CSV 格式對齊索引：
-                    table:   cleanCols[0] || "", // 第一欄 (索引0)：桌次
-                    company: cleanCols[1] || "", // 第二欄 (索引1)：廠商名稱
-                    name:    cleanCols[2] || "", // 第三欄 (索引2)：姓名
-                    title:   cleanCols[3] || "", // 第四欄 (索引3)：職稱
-                    count:   cleanCols[4] || "0"  // 第五欄 (索引4)：參加人數
+                    table:   cleanCols[0] || "", // 索引 0: 桌次
+                    company: cleanCols[1] || "", // 索引 1: 廠商名稱
+                    name:    cleanCols[2] || "", // 索引 2: 姓名
+                    title:   cleanCols[3] || "", // 索引 3: 職稱
+                    count:   cleanCols[4] || "0"  // 索引 4: 參加人數
                 };
             }).filter(g => g.name || g.company);
 
-            document.getElementById('loadingStatus').innerText = "✅ 雲端名單已同步";
-            console.log("資料同步成功，共有 " + guestData.length + " 筆名單");
+            document.getElementById('loadingStatus').innerText = "✅ 名單同步完成";
+            console.log("同步成功筆數:", guestData.length);
         } catch (error) {
             document.getElementById('loadingStatus').innerText = "❌ 同步失敗：" + error.message;
-            console.error(error);
         }
     }
 
@@ -86,6 +81,7 @@ async function fetchSheetData() {
 
         if (!keyword) return;
 
+        // 進行過濾
         const matches = guestData.filter(g => 
             (g.name && g.name.includes(keyword)) || 
             (g.company && g.company.includes(keyword))
@@ -96,20 +92,6 @@ async function fetchSheetData() {
                 resultDiv.innerHTML += `
                     <div class="guest-card">
                         <span class="table-num">${person.table}</span>
-                        <div class="info-row"><span class="label">姓名 / 職稱</span><span class="value">${person.name || "團體"} (${person.title || "無"})</span></div>
-                        <div class="info-row"><span class="label">所屬單位</span><span class="value">${person.company}</span></div>
-                        <div class="info-row"><span class="label">人數</span><span class="value">${person.count} 位</span></div>
-                    </div>
-                `;
-            });
-        } else {
-            resultDiv.innerHTML = "<div style='color:red;'>查無資料，請確認輸入是否有誤。</div>";
-        }
-    }
-
-    // 頁面載入時執行同步
-    fetchSheetData();
-</script>
-
-</body>
-</html>
+                        <div class="info-row">
+                            <span class="label">姓名 / 職稱</span>
+                            <span class="value">${person.name || "團體"} <small style
