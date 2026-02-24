@@ -15,10 +15,27 @@
         .staff-login-btn.active { background: #d32f2f; color: white; border-color: #b71c1c; }
         .edit-sheet-btn { left: 15px; background: #2e7d32; color: white; border-color: #1b5e20; display: none; } 
 
-        /* 標題與 LOGO 樣式 */
-        .header-section { margin-top: 30px; margin-bottom: 20px; }
-        .main-title { font-size: 1.6em; color: #333; font-weight: bold; margin: 0 0 15px 0; letter-spacing: 1px; }
-        .logo-img { width: 130px; height: auto; display: block; margin: 0 auto; }
+        /* 💡 新的標題區塊排版：LOGO 與文字並排 */
+        .header-section { 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            margin-top: 35px; 
+            margin-bottom: 20px;
+            gap: 10px; /* 圖片與文字的間距 */
+        }
+        .main-title { 
+            font-size: 1.5em; 
+            color: #333; 
+            font-weight: bold; 
+            margin: 0; 
+            letter-spacing: 1px; 
+        }
+        .logo-img { 
+            width: 45px; /* 💡 縮小圖片尺寸，與文字高度相仿 */
+            height: auto; 
+            display: block;
+        }
 
         .search-box { display: flex; gap: 10px; margin-bottom: 20px; }
         input[type="text"] { flex: 1; padding: 12px; border: 2px solid #eee; border-radius: 10px; font-size: 16px; outline: none; }
@@ -43,8 +60,8 @@
     <div id="adminBtn" class="nav-btn staff-login-btn" onclick="toggleStaffMode()">工作人員</div>
 
     <div class="header-section">
+        <img src="250310_LOGO_OL-removebg-preview.png" alt="" class="logo-img">
         <h1 class="main-title">榮工春酒桌次查詢系統</h1>
-        <img src="250310_LOGO_OL-removebg-preview.png" alt="GR Logo" class="logo-img">
     </div>
     
     <div id="modeTip" class="mode-tip">目前模式：工作人員</div>
@@ -169,5 +186,4 @@
 </script>
 
 </body>
-
 </html>
